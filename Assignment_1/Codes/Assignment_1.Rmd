@@ -135,4 +135,5 @@ df %>%
 ## Save the data to a csv
 ```{r}
 write.csv(df, 'Verge_scraped_data.csv')
+saveRDS(df, 'Verge_scraped_data.rds')
 ```
