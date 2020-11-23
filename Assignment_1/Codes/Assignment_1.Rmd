@@ -1,0 +1,138 @@
+---
+title: "Webscraping assignment 1"
+subtitle: Viktória Mészáros
+date: 2020-11-22
+
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+    highlight: github
+---
+## Aim of the assignment
+In this project I was creating a code to scrape the website [TheVerge](https://www.theverge.com/). I used a searchterm that came to my mind first "lego". I created a code to scrape the first page of the search output for lego on the website. After this I also made a more flexible function, where the users can set the searchword themselves as well as the number of pages from which they want to get the data. 
+
+```{r, include= FALSE}
+# Initial set up
+
+rm(list=ls())
+
+#install.packages("rvest")
+library(rvest)
+#install.packages("data.table")
+library(data.table)
+#install.packages("xtable")
+library(xtable)
+# install.packages("kableExtra")
+library(kableExtra)
+```
+
+First I save the URL of the website I want to scrape (with the lego searchterm).
+```{r}
+my_url <- 'https://www.theverge.com/search?q=lego'
+
+```
+
+```{r, include=FALSE}
+# check if we have the data on the url
+# t <- read_html(my_url)
+# write_html(t, 'Verge.html')
+```
+
+## Function to get the data on one page
+I included a print(url) function so we can see in the console, where are function is, how it is processing. For the scraping I have set up first the boxes, to be able to cope with potential missing values easily. In each box, I saved the data I want to have and finally I bind the separate lists together to get one data frame.
+```{r}
+get_one_page <- function(my_url) {  
+print(my_url)
+  
+  t <- read_html(my_url)
+  
+  # create the boxes
+  boxes <- 
+    t %>% 
+    html_nodes('.c-entry-box--compact')
+  
+  # get the data and create a list of it for each box
+  box_dfs <- lapply(boxes, function(x){
+    tlist <- list()
+    
+    tlist[['Title']] <- 
+      x %>% 
+      html_nodes('.c-entry-box--compact__title a')%>%
+      html_text()
+    
+    tlist[['Link']]  <- 
+      x%>% 
+      html_nodes('.c-entry-box--compact__title a')%>%
+      html_attr('href')
+    
+    tlist[['Author']] <-
+      x %>% 
+      html_nodes('.c-byline__author-name')%>%
+      html_text()
+    
+    tlist[['Date']] <-
+      trimws(
+      x %>% 
+      html_nodes('.c-byline__item .c-byline__item')%>%
+      html_text())
+
+    tlist[['Num_of_comments']] <-
+     as.numeric(trimws(
+        x %>%
+      html_node('.c-entry-stat__comment-data')%>%
+      html_text()))
+    
+    return(tlist)
+  })
+  
+  # bind the lists of the boxes to one data frame
+  df <- rbindlist(box_dfs, fill = T)
+  return(df)
+}
+
+```
+
+## Scraped data of the first page
+```{r, echo= FALSE}
+df <- get_one_page(my_url)
+
+print(paste('We have',nrow(df), 'observations in our data frame.'))
+
+df %>%
+  kable("html") %>%
+  kable_styling(font_size = 10)
+
+```
+## Function to scrape data from a choosen number of pages for a given searchterm
+The following function has two input variables a searchterm and the number of pages to scrape.
+I have set an initial value for both ("lego" & 5), but the usere has the opportunity to modify these according to their needs and interests. 
+```{r}
+get_data_from_verge <- function(searchterm = "lego", num_of_page=5) {
+  pages <- 
+    c(paste0('https://www.theverge.com/search?q=', searchterm), 
+      paste0('https://www.theverge.com/search?page=', 2:num_of_page, 
+             '&q=', searchterm))
+  
+  ret_df <- rbindlist(lapply(pages, get_one_page))
+  return(ret_df)
+}
+
+```
+
+## The final scraped data 
+To test if my function works, I tried the scrape the first 3 pages for the searchterm "cat". 
+```{r, echo= FALSE}
+df <- get_data_from_verge(searchterm = "cat", num_of_page = 3)
+
+print(paste('We have',nrow(df), 'observations in our data frame.'))
+
+df %>% 
+  kable("html") %>%
+  kable_styling(font_size = 10)
+
+```
+
+## Save the data to a csv
+```{r}
+write.csv(df, 'Verge_scraped_data.csv')
+```
