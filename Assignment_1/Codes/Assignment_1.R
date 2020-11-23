@@ -92,3 +92,4 @@ df %>%
   kable_styling(font_size = 10)
 
 write.csv(df, 'Verge_scraped_data.csv')
+saveRDS(df, 'Verge_scraped_data.rds')
