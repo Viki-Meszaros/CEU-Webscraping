@@ -1,0 +1,17 @@
+---
+title: "Webscraping assignment 2"
+subtitle: Viktória Mészáros
+date: 2020-12-14
+
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+    highlight: github
+---
+
+## Aim of the assignment
+The focus of this project was to scrape all useful data from a chosen site. I decided to scrape the website of [Payscale](https://www.payscale.com/research/US/Job) . I collected 4 separate tables. 
+```{r setup, include=FALSE}
+
+```
+
