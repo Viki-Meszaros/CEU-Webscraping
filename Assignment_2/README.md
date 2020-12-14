@@ -1,4 +1,6 @@
 ## Web scraping assignment 2
+*Viktória Mészáros*
+*2020*
 This folder contains all the files created for the second assignment of my web scraping class at Central European University.
 
 ## Aim
