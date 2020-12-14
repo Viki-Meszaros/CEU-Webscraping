@@ -1,0 +1,126 @@
+---
+title: "Webscraping assignment 2"
+subtitle: Viktória Mészáros
+date: 2020-12-14
+
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+    highlight: github
+---
+
+## Aim of the assignment
+The focus of this project was to scrape all useful data from a chosen site. I decided to scrape the website of [Payscale](https://www.payscale.com/research/US/Job) . I collected 5 separate tables. All of the data is for the US.
+The first table "overview" contains a summary of all the different jobs listed on the site with their description, tasks and skills required, the industry they are in, the average salary and average hourly wage and a job satisfaction score.
+The remaining 4 tables are extended versions with one additional layer. For example "locations" table shows the salaries for each job in each US city. ("employers" show salaries for companies, "experience" by years of experience and skills for different skills required for that job.)
+
+To be able to run this report, you either have to run my [1_download_htmls.R](https://github.com/Viki-Meszaros/CEU-Webscraping/blob/main/Assignment_2/Codes/1_download_htmls.R) then my [2_create_data_tables.R](https://github.com/Viki-Meszaros/CEU-Webscraping/blob/main/Assignment_2/Codes/2_create_data_tables.R) files. Change the "my_path" in the next chunk to the file root, where the previous codes saved the data and you are ready to run this script. The other way is to save the data files from my [Github](https://github.com/Viki-Meszaros/CEU-Webscraping/tree/main/Assignment_2/Data) then change "my_path" and you are set.
+
+## Process overview
+In the first script (1_download_htmls.R) creates a table with all different industries that are on the page. With this table I got all the links for all the available jobs' separate pages. This was important as the data I wanted to get was stored on these. Using the links I downloaded all the html files for the jobs. (I did not uploaded this to Github, so if you want to be able to run 2_create_data_tables.R you need to scrape these and save on your local machine.) 
+
+With the second script (2__create_data_tables.R) I wrote 5 functions each of those extracted the json files from the htlms on the local machine. It would be possible to do the same, but using files online, that saving them decreases the time the program needs to run. the final outcome was the 5 separate tables, that we use in this report.
+```{r setup, include= F, message= F, warning= F}
+rm(list = ls())
+
+library(tidyverse)
+
+my_path <- "C:/Users/admin/Documents/CEU/Fall_semester/Coding_2/Webscraping/Assignment_2/Data/"
+
+# Importing the data tables
+overview <- readRDS(paste0(my_path, "Overview.rds"))
+locations <- readRDS(paste0(my_path, "All_locations.rds"))
+employers <- readRDS(paste0(my_path, "All_employers.rds"))
+experience <- readRDS(paste0(my_path, "All_experiences.rds"))
+skills <- readRDS(paste0(my_path, "All_skills.rds"))
+
+```
+
+## Salaries by industry
+First I wanted to have a look, what are the industries in which people earn the most. It is not a big surprise that the top three were managers and executives, marketing and IT. while it is quite disappointing that those who work in the health-support industry earn even less than people working in reastaurants and the food industry. 
+
+```{r,  echo= F, warning= F, message= F}
+overview %>% 
+  group_by(industry) %>% 
+  summarise("Average_salary" = mean(Salary, na.rm = T)) %>% 
+  ggplot( aes(x = reorder(industry, -Average_salary), y = Average_salary)) + 
+  geom_col(fill = "deepskyblue4") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  labs(title = "Average salary by industry", x = "Industry", y = "Salary")
+```
+
+## Salary for all the jobs
+The distribution of the salaries shows what we would expect. It is close to normal, but with a long right tail. (Note that I only plotted jobs that have a monthly/yearly salary and not paid by hourly wages, and also excluded the ones where were less tha 10 ovservations.)
+
+```{r, out.width='70%', echo= F, warning= F, message= F}
+overview %>% 
+  filter(Gets == "Salary") %>% 
+  filter(Sample_size > 10) %>% 
+  ggplot(aes(x = Salary) ) +
+  geom_histogram(fill = "deeppink4") +
+  labs(title = "Salary distribution", y = "Number of jobs")
+```
+
+## Salary and satisfaction
+As the website contained data about the satisfaction of people with a given job, I wanted to see if their is a correlation between salary and satisfaction. From the graph we cannot conclude that there is a correlation between them, but we would need to use some kind of regression to prove.
+
+```{r, echo= F, warning= F, message= F}
+overview %>% 
+  filter(Gets == "Salary") %>% 
+  filter(Sample_size > 10) %>% 
+ggplot(aes(x = Salary, y = Satisfaction) ) +
+  geom_point( color = "deepskyblue4", alpha = 0.7) +
+  theme_minimal() +
+  labs( title = "Scatterplot for Salary and Satisfaction of the job")
+
+```
+
+## Best and worst states to work in
+If I would be thinking of going to the US to works, I would probably move to California if I want money and sunshine. But for sure not to Missisipi as the average salary is the lowest there.
+
+```{r, echo= F, warning= F, message= F}
+locations %>% 
+  group_by(State) %>% 
+  summarise("Average_salary" = mean(range.50, na.rm = T)) %>% 
+  filter(!is.na(State)) %>% 
+  arrange(-Average_salary) %>% 
+  ggplot( aes(x = reorder(State, -Average_salary), y = Average_salary)) + 
+  geom_col(fill = "deeppink4") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  labs(title =  "Average salary by state", x = "State", y = "Salary")
+```
+
+## Experience level
+As anyone would expect our data shows the trend that as you work more (your years of experience increases) so does your salary.
+
+```{r, out.width='70%', echo= F, warning= F, message= F}
+experience %>% 
+  group_by(name) %>% 
+  summarise("Average_salary" = mean(range.50, na.rm = T)) %>% 
+  filter(!is.na(name)) %>% 
+  ggplot( aes(x = reorder(name, Average_salary), y = Average_salary)) + 
+  geom_col( fill = "deepskyblue4") +
+  labs(title =  "Average salary by experience level", x = "Experince", y = "Salary")
+```
+
+## Most wanted skills
+I wanted to know what is the skill that is needed for most of the jobs. If you want to learn the most useful skill that most jobs and so employees look for you should learn project management or Microsoft Office. These two were mentioned in more than 1000 jobs (out of the 2819).
+
+```{r, out.width='80%', echo= F, warning= F, message= F}
+skills %>% 
+  group_by(name) %>% 
+  summarise( "number" = n()) %>% 
+  filter(!is.na(name)) %>% 
+  arrange(-number) %>% 
+  head(20) %>% 
+  ggplot( aes(x = reorder(name, -number), y = number)) + 
+  geom_col( fill = "deeppink4") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  labs(title =  "Number of jobs mentioning the skill", x = "Skill", y = "Number of jobs")
+```
+
+## Conclusion
+The final conclusion we could make from these data is that if we want to get rich we should become general managers or executives in the District of Columbia with 20 plus years of experience and should learn project management and Microsoft Office as those are needed for the majority of the jobs.
+My personal final thought on the project is that it is so amazing and powerful, that with only a couple of lines of code you can get data of more than 300 thousand observations. Due to this I would advise to include web scraping to your skill set as well!!!
+
+
